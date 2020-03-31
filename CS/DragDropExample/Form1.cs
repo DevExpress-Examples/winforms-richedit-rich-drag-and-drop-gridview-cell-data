@@ -51,7 +51,7 @@ namespace DragDropExample
 
         void gridControl_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(string)))
+            if (e.Data.GetDataPresent(typeof(GridCellData)))
                 e.Effect = DragDropEffects.Move;
             else
                 e.Effect = DragDropEffects.None;
@@ -71,7 +71,8 @@ namespace DragDropExample
                 {
                     string cellTextValue = view.GetDataRow(downHitInfo.RowHandle)[downHitInfo.Column.FieldName].ToString();
 
-                    view.GridControl.DoDragDrop(cellTextValue, DragDropEffects.Move);
+                    GridCellData clipboardData = new GridCellData(cellTextValue);
+                    view.GridControl.DoDragDrop(clipboardData, DragDropEffects.Move);
                     downHitInfo = null;
                     DevExpress.Utils.DXMouseEventArgs.GetMouseArgs(e).Handled = true;
                 }
@@ -89,9 +90,11 @@ namespace DragDropExample
 
         private void richEditControl1_DragDrop(object sender, DragEventArgs e)
         {
-            string value = (string)e.Data.GetData(typeof(string));
+            GridCellData value = (GridCellData)e.Data.GetData(typeof(GridCellData));
+            if (value == null) return;
+
             richEditControl1.Document.BeginUpdate();
-            richEditControl1.Document.InsertText(richEditControl1.Document.CaretPosition, value);
+            richEditControl1.Document.InsertText(richEditControl1.Document.CaretPosition, value.Content);
             richEditControl1.Document.EndUpdate();
             richEditControl1.Options.Behavior.Drop = DevExpress.XtraRichEdit.DocumentCapability.Enabled;
             richEditControl1.Focus();
@@ -100,15 +103,16 @@ namespace DragDropExample
         DocumentPosition oldPosition = null;
         private void richEditControl1_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(string)))
-                e.Effect = DragDropEffects.Move;
-            else
-                e.Effect = DragDropEffects.None;
+            if (!e.Data.GetDataPresent(typeof(GridCellData)))
+                return;
 
-            Point docPoint = Units.PixelsToDocuments(richEditControl1.PointToClient(Form.MousePosition),
+            e.Effect = DragDropEffects.Move;
+
+            Point docPoint = Units.PixelsToDocuments(richEditControl1.PointToClient(new Point(e.X, e.Y)),
                 richEditControl1.DpiX, richEditControl1.DpiY);
 
             DocumentPosition pos = richEditControl1.GetPositionFromPoint(docPoint);
+            if (pos == null) return;
 
             Rectangle rect = Units.DocumentsToPixels(richEditControl1.GetBoundsFromPosition(pos),
                 richEditControl1.DpiX, richEditControl1.DpiY);
